@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html>
+<meta http-equiv="refresh" content="600">
+<title>yeezy COUNTRY v1.9</title>
+<META NAME="robots" CONTENT="noindex,nofollow">
+<style>
+.table td, .table th { font-size: 11px; }
+table { border-spacing:0;}
+img.good { border: 5px solid #3FFF00;}
+img.bad { border: 5px solid #F08080;}
+#myProgress { width: 100%; background-color: grey;}
+#myBar { width: 1%; height: 30px; background-color: green; }
+.onsale { background-color: Violet; }
+
+#error_log {font-size: 12px;  background-color: #E0E0E0; font-family: "Lucida Console", "Courier New", monospace;}
+
+}
+</style>
+
+<script>
+
+current_total = 85; 		// This is what the site I know has, so if its changed I want to be alerted to the change
+my_size = "M 11 / W 12";	// My Shoe size the code is checking against
+my_size_2 = "11";			// second shoe size as slides and foams are single digits
+
+
+// formatting
+rows_per_line = 7;			// how many rows in the HTML table to show
+
+// global data
+var data;
+var sizedata;
+yeezy_total_shoes = 0;		// global value (dont change)
+
+function get_current_yeezy_total(){
+	var url = 'https://www.adidas.com.au/api/plp/content-engine?query=yeezy&sort=price-high-to-low';
+
+	var country = window.location.search;
+	var domain = country.match(/country=([\w\.]+)/)[1]
+	if(domain != ""){
+		url = 'https://www.adidas.' + domain + '/api/plp/content-engine?query=yeezy&sort=price-high-to-low';
+		//url = 'https://www.adidas.' + domain + '/api/plp/content-engine?query=yeezy';
+	}
+
+	fetch(url)
+	  .then(response => response.json())
+	  .then(function(sizedata) {
+		//alert(data);
+		//console.log(sizedata);
+		var div = document.getElementById("yeezytotal");
+		div.innerHTML += "<b>Yeezy Total : " + sizedata.raw.itemList.count + "</b>";
+		yeezy_total_shoes = sizedata.raw.itemList.count;
+		if(sizedata.raw.itemList.count != current_total && domain == "com.au"){
+			document.body.style.background = '#D8BFD8';
+		}
+		load_yeezy_pagination(yeezy_total_shoes);
+	  })
+	.catch(err => console.log(err))
+}
+
+// this will query a domain and update a div
+function get_current_yeezy_total_site(domain,divID){
+	var url = 'https://www.adidas.' + domain + '/api/plp/content-engine?query=yeezy&sort=price-high-to-low';
+
+	fetch(url)
+	  .then(response => response.json())
+	  .then(function(sizedata) {
+		//alert(data);
+		//console.log(sizedata);
+		var div = document.getElementById(divID);
+		div.innerHTML += sizedata.raw.itemList.count;
+	  })
+	.catch((error) => {
+		console.log("error -----------------");
+		  if (error instanceof SyntaxError) {
+			// Unexpected token < in JSON
+			console.log('There was a SyntaxError', error);
+		  } else {
+			console.log('There was an error', error);
+		  }
+		
+		log_errors(error,url);
+	});
+}
+
+
+function get_current_sizes(start_pagination){
+
+//https://www.adidas.com.au/api/plp/content-engine?query=yeezy&start=48
+//https://www.adidas.com.au/api/plp/content-engine?query=yeezy&start=96
+//https://www.adidas.com.au/api/plp/content-engine?query=yeezy&start=144
+
+	var url = 'https://www.adidas.com.au/api/plp/content-engine?query=yeezy&sort=price-high-to-low'+start_pagination;
+
+	var country = window.location.search;
+	var domain = country.match(/country=([\w\.]+)/)[1]
+	if(domain != ""){
+		url = 'https://www.adidas.' + domain + '/api/plp/content-engine?query=yeezy&sort=price-high-to-low'+start_pagination;
+		//url = 'https://www.adidas.' + domain + '/api/plp/content-engine?query=yeezy&v_size_en_au=m_13___w_14';
+	}
+
+	fetch(url)
+	  .then(response => response.json())
+	  .then(function(sizedata) {
+		//alert(data);
+		console.log(sizedata);
+		display_sizedata(sizedata,"searchresults");
+	  })
+	.catch(err => console.log(err))
+}
+
+function display_sizedata(sizedata,divID){
+	var country_regex = window.location.search;
+	var adidas_site = "https://www.adidas.com.au";
+	var domain = country_regex.match(/country=([\w\.]+)/)[1]
+	if(domain == "com"){
+		adidas_site = 'https://www.adidas.' + domain + '/us';
+	}else if(domain != ""){
+		adidas_site = 'https://www.adidas.' + domain;
+	}
+
+
+
+	var div = document.getElementById(divID);
+	div.innerHTML += "Current Yeezy Search Results Total : ";
+	div.innerHTML += " ( " ;
+	try{
+		div.innerHTML += sizedata.raw.itemList.viewSize + " / ";
+	} catch (error) {
+	}
+	
+	div.innerHTML += sizedata.raw.itemList.count;
+	div.innerHTML += " ) ";
+	
+	var arrayLength = sizedata.raw.itemList.items.length;
+	if(arrayLength > 0){
+		var string = "";
+		string += '<table border="1" class="table">';
+		string += '<tr>';
+		for (var i = 0; i < arrayLength; i++) {
+			var sku = sizedata.raw.itemList.items[i].productId;
+			
+			string += '<td valign=top id="tdsku' + sku + '">';
+			//string += sizedata.raw.itemList.items[i].altText
+			string += sizedata.raw.itemList.items[i].displayName 
+			//string += "<br/> ($" +sizedata.raw.itemList.items[i].salePrice + ")";
+			if(sizedata.raw.itemList.items[i].price != sizedata.raw.itemList.items[i].salePrice){
+				string += " <s>$" + sizedata.raw.itemList.items[i].price + "</s> ";
+				string += "<span class='onsale'>";
+				string += " ($" +sizedata.raw.itemList.items[i].salePrice + ")";
+				string += " "+ sizedata.raw.itemList.items[i].salePercentage;
+				string += "</span>";
+			}else{
+				string += " ($" +sizedata.raw.itemList.items[i].salePrice + ")";
+			}
+			
+			string += " " +sizedata.raw.itemList.items[i].productId;
+			string += '<br/>';
+			string += '<a href="' + adidas_site + '' + sizedata.raw.itemList.items[i].link + '" rel="noopener noreferrer" >';
+			string += '<img src="' + sizedata.raw.itemList.items[i].image.src + '" height="200" />'
+			string += '</a>';
+			string += '<div id="sku'+sku+'"></div>';
+
+			string += '</td>';
+			
+			if ((i+1)%rows_per_line == 0){
+				string += '</tr>';
+				string += '<tr>';
+			}
+			
+		}
+		string += '</tr>';
+		string += '</table>';
+		div.innerHTML += string;
+		
+		// now loop and check the SKU data
+		for (var i = 0; i < arrayLength; i++) {
+			var sku = sizedata.raw.itemList.items[i].productId;
+			
+			get_availability_ajax(sku,"sku"+sku)
+		}
+	}
+}
+
+function get_availability_ajax(sku,divID){
+
+	var url = 'https://www.adidas.com.au/api/products/' + sku + '/availability';
+
+	var country = window.location.search;
+	var domain = country.match(/country=([\w\.]+)/)[1]
+	if(domain != ""){
+		url = 'https://www.adidas.' + domain + '/api/products/' + sku + '/availability';
+	}
+
+	fetch(url)
+	  .then(response => response.json())
+	  .then(function(data) {
+		//alert(data);
+		console.log(data);
+		display_data(data,sku,divID);
+	  })
+	.catch(err => console.log(err))
+
+}
+
+function display_data(data,sku,divID){
+
+	var div = document.getElementById(divID);
+
+	div.innerHTML += sku;
+	//alert(data['variation_list'][0]['sku']);
+	
+	var string = '';
+
+	var found = false;
+	try {
+		var arrayLength = data['variation_list'].length;
+		if(arrayLength > 0){
+			string += '<table border="1">';
+			for (var i = 0; i < arrayLength; i++) {
+				//var my_size = "M 13 / W 14";
+				//var my_size = "M 7.5 / W 8.5";
+				
+				string += '<tr>';
+				//string += '<td>' + data['variation_list'][i]['sku'] + '</td>';
+				string += '<td>' + data['variation_list'][i]['size'] + '</td>';
+				string += '<td>' + data['variation_list'][i]['availability'] + '</td>';
+				if(data['variation_list'][i]['size'] == my_size && data['variation_list'][i]['availability_status'] == "NOT_AVAILABLE"){
+					string += '<td bgcolor="red">' + data['variation_list'][i]['availability_status'] + '</td>';
+				}else if(data['variation_list'][i]['size'] == my_size_2 && data['variation_list'][i]['availability_status'] == "NOT_AVAILABLE"){
+					string += '<td bgcolor="red">' + data['variation_list'][i]['availability_status'] + '</td>';
+				}else if(data['variation_list'][i]['size'] == my_size && data['variation_list'][i]['availability_status'] == "IN_STOCK"){
+					found = true;
+					string += '<td bgcolor="green">' + data['variation_list'][i]['availability_status'] + '</td>';
+					document.getElementById('tdsku' + sku).style.backgroundColor='#7CFC00';
+				}else if(data['variation_list'][i]['size'] == my_size_2 && data['variation_list'][i]['availability_status'] == "IN_STOCK"){
+					found = true;
+					string += '<td bgcolor="green">' + data['variation_list'][i]['availability_status'] + '</td>';
+					document.getElementById('tdsku' + sku).style.backgroundColor='#7CFC00';
+				}else if(data['variation_list'][i]['availability_status'] == "IN_STOCK"){
+					string += '<td bgcolor="#AFE1AF">' + data['variation_list'][i]['availability_status'] + '</td>';
+				}else{
+					string += '<td >' + data['variation_list'][i]['availability_status'] + '</td>';
+				}
+				string += '</tr>';
+				
+			}
+			string += '</table>';
+		}
+	} catch (error) {
+		console.error(error);
+		// Expected output: ReferenceError: nonExistentFunction is not defined
+		// (Note: the exact output may be browser-dependent)
+		var availability_status = data['availability_status'];
+		string += '<br/>Availability : <b>' + availability_status + '</b>';
+	}
+	
+	/*
+	var image = get_image(sku);
+	var image_string = "";
+	if(image != ""){
+		if(found == false){
+			image_string += '<br/><img class="bad" src="'+ image + '" width=150 />';
+		}else if(found == true){
+			image_string += '<br/><img class="good"  src="'+ image + '" width=150 />';
+			document.body.style.background = '#8cc751';
+		}
+		string = image_string + string;
+	}
+	*/
+	div.innerHTML += string;
+
+}
+
+
+function get_the_yeezys(){
+	try {
+		var country_regex = window.location.search;
+		var domain = country_regex.match(/country=([\w\.]+)/)[1]
+		get_current_yeezy_total();
+
+	} catch (error) {
+		//find_sizes('13%7CM_13___W_14');
+		alert("Select a Country");
+		//window.stop();
+	}
+
+	//get_current_yeezy_total()
+//	alert(yeezy_total_shoes);
+	//get_current_sizes("&start=0");
+//	setTimeout(function() { alert(yeezy_total_shoes); }, 1000);
+
+	//get_current_sizes("&start=48");
+	//get_current_sizes("&start=96");
+	//get_current_sizes("&start=144");
+}
+
+function load_yeezy_pagination(total){
+	var load_delay = 3000;
+	
+	setTimeout(function() { get_current_sizes("&start=0"); }, (load_delay * 1));
+	if(total >= 48) setTimeout(function() { get_current_sizes("&start=48"); }, (load_delay * 2));
+	if(total >= 96) setTimeout(function() { get_current_sizes("&start=96"); }, (load_delay * 3));
+	if(total >= 144) setTimeout(function() { get_current_sizes("&start=144"); }, (load_delay * 4));
+	if(total >= 192) setTimeout(function() { get_current_sizes("&start=192"); }, (load_delay * 5));
+	if(total >= 240) setTimeout(function() { get_current_sizes("&start=240"); }, (load_delay * 6));
+}
+
+function log_errors(response,url){
+	//var display_errors = false;
+	var display_errors = true;
+	
+	if(display_errors == true){
+		var div = document.getElementById('error_log');
+		if(div.innerHTML == ""){
+			div.innerHTML += "<h3>Error Log</h3>";
+		}
+		div.innerHTML += url;
+		div.innerHTML += '<br/>';
+		div.innerHTML += response;
+		div.innerHTML += '<br/>';
+	}
+}
+
+function get_all_sites_yeezy_totals(){
+	const adidas_sites = [
+		"com.ar",
+		"com.br",
+		"ca",
+		//"ca/en",
+		//"ca/fr",
+		"cl",
+		"co",
+		"mx",
+		"pe",
+		"com",
+		"com.au",
+		"co.in",
+		//"co.id", this country works differently 
+		"co.kr",
+		"com.my",
+		"co.nz",
+		"com.ph",
+		"com.sg",
+		"co.th",
+		"com.vn",
+		"be",
+		"cz",
+		"dk",
+		"de",
+		"gr",
+		"es",
+		"fr",
+		"it",
+		"ie",
+		//"hu",
+		"nl",
+		"no",
+		"at",
+		"pl",
+		"pt",
+		"ch",
+		"sk",
+		"fi",
+		"se",
+		"com.tr",
+		"co.uk"
+	];
+	for (const element of adidas_sites) { 
+		//console.log(element);
+		var divID = "countryid_" + element;
+		get_current_yeezy_total_site(element,divID);
+	}
+}
+
+
+
+
+
+
+get_all_sites_yeezy_totals();
+
+
+
+</script>
+
+<body>
+<div id="myProgress">
+  <div id="myBar"></div>
+</div>
+
+<div id="yeezytotal"></div>
+<div id="searchresults"></div>
+
+
+
+
+
+<hr/>
+
+
+<div class="country-group-holder">
+	
+    <div class="country-group country-group-americas clearfix">
+        <ul class="country-column country-column-1">
+            <li>
+                <a href="?country=com.ar">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwa10df226/Country-selector/flag-argentina.png" alt="Argentina">
+                    <span class="country-name">Argentina</span>
+                </a>
+				<span id="countryid_com.ar"></span>
+            </li>
+            <li>
+                <a href="?country=com.br">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw86774d75/Country-selector/flag-brasil.png" alt="Brasil">
+                    <span class="country-name">Brasil</span>
+                </a>
+				<span id="countryid_com.br"></span>
+            </li>
+            <li>
+                <a href="?country=ca">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw6be09103/Country-selector/flag-canada.png" alt="Canada-EN">
+                    <span class="country-name">Canada (EN)</span>
+                </a>
+				<span id="countryid_ca"></span>
+            </li>
+<!--
+            <li>
+                <a href="?country=ca/en">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw6be09103/Country-selector/flag-canada.png" alt="Canada-EN">
+                    <span class="country-name">Canada (EN)</span>
+                </a>
+				<span id="countryid_ca/en"></span>
+            </li>
+-->
+        </ul>
+        <ul class="country-column country-column-2">
+<!--
+            <li>
+                <a href="?country=ca/fr">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw6be09103/Country-selector/flag-canada.png" alt="Canada-FR">
+                    <span class="country-name">Canada (FR)</span>
+                </a>
+<span id="countryid_ca/fr"></span>
+            </li>
+-->
+            <li>
+                <a href="?country=cl">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw45a64570/Country-selector/flag-chile.png" alt="Chile">
+                    <span class="country-name">Chile</span>
+                </a>
+<span id="countryid_cl"></span>
+            </li>
+            <li>
+                <a href="?country=co">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw37f5be1b/Country-selector/flag-colombia.png" alt="Colombia">
+                    <span class="country-name">Colombia</span>
+                </a>
+<span id="countryid_co"></span>
+            </li>
+        </ul>
+        <ul class="country-column country-column-3">
+<!--
+            <li>
+                <a href="https://www.latin-america.adidas.com/">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw6c848264/Country-selector/empty_flag.jpg" alt="Latinoamérica">
+                    <span class="country-name">Latinoamérica</span>
+                </a>
+            </li>
+-->
+            <li>
+                <a href="?country=mx">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw756d7ebf/Country-selector/flag-mexico.png" alt="México">
+                    <span class="country-name">México</span>
+                </a>
+<span id="countryid_mx"></span>
+            </li>
+            <li>
+                <a href="?country=pe">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw8175f8f6/Country-selector/flag-peru.png" alt="Perú">
+                    <span class="country-name">Perú</span>
+                </a>
+<span id="countryid_pe"></span>
+            </li>
+        </ul>
+        <ul class="country-column country-column-4">
+            <li>
+                <a href="?country=com">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw5cef4b71/Country-selector/flag-unitedStates.png" alt="United States">
+                    <span class="country-name">United States</span>
+                </a>
+<span id="countryid_com"></span>
+            </li>
+        </ul>
+    </div>
+    <div class="country-group country-group-asia-pacific clearfix">
+        <ul class="country-column country-column-1">
+            <li>
+                <a href="?country=com.au">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwcc23fdde/Country-selector/flag-australia.png" alt="Australia">
+                    <span class="country-name">Australia</span>
+                </a>
+<span id="countryid_com.au"></span>
+            </li>
+            <li>
+                <a href="?country=co.in">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw0ef31c59/Country-selector/flag-india.png" alt="India">
+                    <span class="country-name">India</span>
+                </a>
+<span id="countryid_co.in"></span>
+            </li>
+<!--
+            <li>
+                <a href="?country=co.id">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw50fbace5/Country-selector/flag-indonesia.png" alt="Indonesia">
+                    <span class="country-name">Indonesia</span> this country works differently 
+                </a>
+<span id="countryid_co.id"></span>
+            </li>
+-->
+        </ul>
+        <ul class="country-column country-column-2">
+		<!--
+            <li>
+                <a href="http://shop.adidas.jp">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw7bd66f79/Country-selector/flag-japan.png" alt="Japan">
+                    <span class="country-name">Japan</span>
+                    <img class="country-code" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw87ac7109/Country-selector/countrycode_japan.gif" alt="Japan">
+                </a>
+            </li>
+		-->
+            <li>
+                <a href="?country=co.kr">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwf1ae434d/Country-selector/flag-koreaSouth.png" alt="Korea">
+                    <span class="country-name">Korea</span>
+                    <img class="country-code" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw5d667538/Country-selector/countrycode_korea.gif" alt="Korea">
+                </a>
+<span id="countryid_co.kr"></span>
+            </li>
+			<!--
+            <li>
+                <a href="http://shop.adidas.co.kr">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwf1ae434d/Country-selector/flag-koreaSouth.png" alt="Korea Shop">
+                    <span class="country-name">Korea Shop</span>
+                </a>
+            </li>
+			-->
+            <li>
+                <a href="?country=com.my">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw1df662f5/Country-selector/flag-malaysia.png" alt="Malaysia">
+                    <span class="country-name">Malaysia</span>
+                </a>
+<span id="countryid_com.my"></span>
+            </li>
+
+        </ul>
+        <ul class="country-column country-column-3">
+            <li>
+                <a href="?country=co.nz">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw6f513897/Country-selector/flag-newZealand.png" alt="New Zealand">
+                    <span class="country-name">New Zealand</span>
+                </a>
+<span id="countryid_co.nz"></span>
+            </li>
+            <li>
+                <a href="?country=com.ph">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw197e55e0/Country-selector/flag-philippines.png" alt="Philippines">
+                    <span class="country-name">Philippines</span>
+                </a>
+<span id="countryid_com.ph"></span>
+            </li>
+            <li>
+                <a href="?country=com.sg">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwec26d138/Country-selector/flag-singapore.png" alt="Singapore">
+                    <span class="country-name">Singapore</span>
+                </a>
+<span id="countryid_com.sg"></span>
+            </li>
+        </ul>
+        <ul class="country-column country-column-4">
+            <li>
+                <a href="?country=co.th">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw48cca592/Country-selector/flag-thailand.png" alt="Thailand">
+                    <span class="country-name">Thailand</span>
+                </a>
+<span id="countryid_co.th"></span>
+            </li>
+
+            <li>
+                <a href="?country=com.vn">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwbd2ef6a7/Country-selector/flag-vietnam.png" alt="Vietnam">
+                    <span class="country-name">Vietnam</span>
+                </a>
+<span id="countryid_com.vn"></span>
+            </li>
+        </ul>
+    </div>
+    <div class="country-group country-group-europe clearfix">
+        <ul class="country-column country-column-1">
+            <li>
+                <a href="?country=be">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw3f65fc56/Country-selector/flag-belgium.png" alt="Belgium">
+                    <span class="country-name">Belgium</span>
+                </a>
+<span id="countryid_be"></span>
+            </li>
+            <li>
+                <a href="?country=cz">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw1cbf3b68/Country-selector/flag-czech.png" alt="Czech Republic">
+                    <span class="country-name">Czech Republic</span>
+                </a>
+<span id="countryid_cz"></span>
+            </li>
+            <li>
+                <a href="?country=dk">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwf70fec02/Country-selector/flag-denmark.png" alt="Denmark">
+                    <span class="country-name">Denmark</span>
+                </a>
+<span id="countryid_dk"></span>
+            </li>
+            <li>
+                <a href="?country=de">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw0cc2d746/Country-selector/flag-germany.png" alt="Deutschland">
+                    <span class="country-name">Deutschland</span>
+                </a>
+<span id="countryid_de"></span>
+            </li>
+            <li>
+                <a href="?country=gr">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwe35eef01/Country-selector/flag-greece.png" alt="Greece">
+                    <span class="country-name">Greece</span>
+                </a>
+<span id="countryid_gr"></span>
+            </li>
+        </ul>
+        <ul class="country-column country-column-2">
+            <li>
+                <a href="?country=es">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw96d0ff75/Country-selector/flag-spain.png" alt="Espana">
+                    <span class="country-name">Espana</span>
+                </a>
+<span id="countryid_es"></span>
+            </li>
+            <li>
+                <a href="?country=fr">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwfdad0d77/Country-selector/flag-france.png" alt="France">
+                    <span class="country-name">France</span>
+                </a>
+<span id="countryid_fr"></span>
+            </li>
+            <li>
+                <a href="?country=it">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw2f2fcb81/Country-selector/flag-italy.png" alt="Italia">
+                    <span class="country-name">Italia</span>
+                </a>
+<span id="countryid_it"></span>
+            </li>
+            <li>
+                <a href="?country=ie">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwcc3c3347/Country-selector/flag-ireland.png" alt="Ireland">
+                    <span class="country-name">Ireland</span>
+                </a>
+<span id="countryid_ie"></span>
+            </li>
+<!--
+            <li>
+                <a href="?country=hu">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwbd278545/Country-selector/flag-hungary.png" alt="Magyarország">
+                    <span class="country-name">Magyarország</span>
+                </a>
+<span id="countryid_hu"></span>
+            </li>
+-->
+            <li>
+                <a href="?country=nl">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwaba4bb8f/Country-selector/flag-netherlands.png" alt="Nederland">
+                    <span class="country-name">Nederland</span>
+                </a>
+<span id="countryid_nl"></span>
+            </li>
+        </ul>
+        <ul class="country-column country-column-3">
+            <li>
+                <a href="?country=no">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw7d0ad6cb/Country-selector/flag-norway.png" alt="Norway">
+                    <span class="country-name">Norway</span>
+                </a>
+<span id="countryid_no"></span>
+            </li>
+            <li>
+                <a href="?country=at">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwabe94b7d/Country-selector/flag-austria.png" alt="Österreich">
+                    <span class="country-name">Österreich</span>
+                </a>
+<span id="countryid_at"></span>
+            </li>
+            <li>
+                <a href="?country=pl">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw07ed48e6/Country-selector/flag-poland.png" alt="Polska">
+                    <span class="country-name">Polska</span>
+                </a>
+<span id="countryid_pl"></span>
+            </li>
+            <li>
+                <a href="?country=pt">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwae225da6/Country-selector/flag-portugal.png" alt="Portugal">
+                    <span class="country-name">Portugal</span>
+                </a>
+<span id="countryid_pt"></span>
+            </li>
+<!--
+            <li>
+                <a href="?country=ru">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwace04ad4/Country-selector/flag-russia.png" alt="Russia">
+                    <span class="country-name">Russia</span>
+                </a>
+<span id="countryid_ru"></span>
+            </li>
+-->
+            <li>
+                <a href="?country=ch">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw457cbf34/Country-selector/flag-switzerland.png" alt="Schweiz">
+                    <span class="country-name">Schweiz</span>
+                </a>
+<span id="countryid_ch"></span>
+            </li>
+        </ul>
+        <ul class="country-column country-column-4">
+            <li>
+                <a href="?country=sk">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dwcbda605e/Country-selector/flag-slovakia.png" alt="Slovakia">
+                    <span class="country-name">Slovakia</span>
+                </a>
+<span id="countryid_sk"></span>
+            </li>
+            <li>
+                <a href="?country=fi">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw65d6974f/Country-selector/flag-finland.png" alt="Suomi">
+                    <span class="country-name">Suomi</span>
+                </a>
+<span id="countryid_fi"></span>
+            </li>
+            <li>
+                <a href="?country=se">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw1125cdf7/Country-selector/flag-sweden.png" alt="Sverige">
+                    <span class="country-name">Sverige</span>
+                </a>
+<span id="countryid_se"></span>
+            </li>
+            <li>
+                <a href="?country=com.tr">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw8b482222/Country-selector/flag-turkey.png" alt="Türkiye">
+                    <span class="country-name">Türkiye</span>
+                </a>
+<span id="countryid_com.tr"></span>
+            </li>
+            <li>
+                <a href="?country=co.uk">
+                    <img class="country-flag" src="https://www.adidas.com/on/demandware.static/-/Sites-adidas-US-Library/default/dw5166fb12/Country-selector/flag-greatBritain.png" alt="United Kingdom">
+                    <span class="country-name">United Kingdom</span>
+                </a>
+<span id="countryid_co.uk"></span>
+            </li>
+        </ul>
+    </div>
+</div>
+<hr/>
+<div id='error_log'></div>
+<script>
+let start;
+let element = document.getElementById("myBar");
+let count = 0;
+function step(timestamp) {
+  if (start === undefined)
+    start = timestamp;
+  const elapsed = timestamp - start;
+
+  element.style.width = (100 / 600000) * elapsed + "%";
+  
+  if (elapsed < 600000) { // Stop the animation after 2 seconds
+    window.requestAnimationFrame(step);
+  }else {
+  }
+}
+window.requestAnimationFrame(step);
+</script>
+<script>
+	get_the_yeezys();
+</script>
+</body>
+</html>
